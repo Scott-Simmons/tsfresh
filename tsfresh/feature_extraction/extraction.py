@@ -5,17 +5,20 @@
 This module contains the main function to interact with tsfresh: extract features
 """
 
+import numpy as np
 import logging
 import warnings
 from collections import Iterable
+from numpy import dtype
 
 import pandas as pd
 from dask import dataframe as dd
 
 from tsfresh import defaults
 from tsfresh.feature_extraction import feature_calculators
-from tsfresh.feature_extraction.data import to_tsdata, IterableSplitTsData, ApplyableSplitTsData
 from tsfresh.feature_extraction.settings import ComprehensiveFCParameters
+from data import to_tsdata, IterableSplitTsData, ApplyableSplitTsData
+
 from tsfresh.utilities import profiling
 from tsfresh.utilities.distribution import MapDistributor, MultiprocessingDistributor, \
     DistributorBaseClass, ApplyDistributor
@@ -148,7 +151,6 @@ def extract_features(timeseries_container, default_fc_parameters=None,
             warnings.simplefilter("ignore")
         else:
             warnings.simplefilter("default")
-
         result = _do_extraction(df=timeseries_container,
                                 column_id=column_id, column_value=column_value,
                                 column_kind=column_kind,
@@ -290,6 +292,7 @@ def _do_extraction_on_chunk(chunk, default_fc_parameters, kind_to_fc_parameters)
         fc_parameters = default_fc_parameters
 
     def _f():
+
         for function_name, parameter_list in fc_parameters.items():
             func = getattr(feature_calculators, function_name)
 
@@ -312,12 +315,20 @@ def _do_extraction_on_chunk(chunk, default_fc_parameters, kind_to_fc_parameters)
                 x = data.values
 
             if func.fctype == "combiner":
+                # Casting ndarray with dtype object to dtype float as dtype object is not compatible with some feature calculators
+                x = np.asarray(x, dtype = float)
                 result = func(x, param=parameter_list)
             else:
                 if parameter_list:
+                    #if function_name == "binned_entropy": 
+                    #    print("Stop here")
+                    # Casting ndarray with dtype object to dtype float as dtype object is not compatible with some feature calculators
+                    x = np.asarray(x, dtype = float)
                     result = ((convert_to_output_format(param), func(x, **param)) for param in
                               parameter_list)
                 else:
+                    # Casting ndarray with dtype object to dtype float as dtype object is not compatible with some feature calculators
+                    x = np.asarray(x, dtype = float)
                     result = [("", func(x))]
 
             for key, item in result:
@@ -325,7 +336,6 @@ def _do_extraction_on_chunk(chunk, default_fc_parameters, kind_to_fc_parameters)
                 if key:
                     feature_name += "__" + str(key)
                 yield (sample_id, feature_name, item)
-
     return list(_f())
 
 
@@ -344,6 +354,8 @@ def extract_features_on_sub_features(timeseries_container,
     sub_features = extract_features(split_ts_data, default_fc_parameters=sub_default_fc_parameters,
                                     kind_to_fc_parameters=sub_kind_to_fc_parameters, **kwargs, pivot=False)
 
+
+    # the some features can produce NaNs which need to be removed before the next round of feature extraction
     column_kind = column_kind or "variable"
     column_id = column_id or "id"
     column_sort = column_sort or "sort"
@@ -355,6 +367,7 @@ def extract_features_on_sub_features(timeseries_container,
     # We need to do this separately for dask dataframes,
     # as the return type is not a list, but already a dataframe
     if isinstance(sub_features, dd.DataFrame):
+        # TODO: dropping NAs for Dask dataframes... write tests
         sub_features = sub_features.reset_index(drop=True)
 
         sub_features[column_kind] = sub_features[column_kind].apply(lambda col: col.replace("_", ""), meta=(column_kind, object))
@@ -363,9 +376,13 @@ def extract_features_on_sub_features(timeseries_container,
         sub_features[column_id] = sub_features[column_id].apply(lambda x: x[0], meta=(column_id, ts_data.df_id_type))
 
     else:
-        sub_features = pd.DataFrame(sub_features, columns=[column_id, column_kind, column_value])
+        sub_features = pd.DataFrame(sub_features, columns=[column_id, column_kind, column_value]) 
 
-        sub_features[column_kind] = sub_features[column_kind].apply(lambda col: col.replace("_", ""))
+        # Need to drop features for all windows which contain at one NaN
+        target_list = sub_features[sub_features[column_value].isnull()][column_kind].unique()
+        sub_features = sub_features[~sub_features[column_kind].isin(target_list)]
+
+        sub_features[column_kind] = sub_features[column_kind].apply(lambda col: col.replace("__", "||"))
 
         sub_features[column_sort] = sub_features[column_id].apply(lambda x: x[1])
         sub_features[column_id] = sub_features[column_id].apply(lambda x: x[0])
@@ -373,5 +390,7 @@ def extract_features_on_sub_features(timeseries_container,
     X = extract_features(sub_features, column_id=column_id, column_sort=column_sort, column_kind=column_kind, column_value=column_value,
                          default_fc_parameters=default_fc_parameters, kind_to_fc_parameters=kind_to_fc_parameters,
                          **kwargs)
+    # Drop all feature dynamics that have at least one NaN
+    X = X.dropna(axis = "columns", how = "any")
 
     return X
