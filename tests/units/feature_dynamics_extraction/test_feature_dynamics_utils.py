@@ -624,30 +624,6 @@ class EngineerTimeSeriesTestCaseDifferencesWithin(DataTestCase):
             stacked_dataframe_timeseries_container, expected_unmodified_data
         )
 
-    def test_differences_within_stacked_dataframe_unordered(self):
-        """ Test case where a sort column exists but it is randomised and must be checked"""
-        stacked_df_timeseries_test_container, (column_id, column_sort, column_kind, column_value) = self.create_simple_test_data_sample_stacked()
-        stacked_df_timeseries_test_container["sort"] = [15, 14, 3, 8, 1, 5, 7, 0, 4, 12, 13, 9, 6, 2, 17, 16, 11, 10]
-
-        ##TODO a function to check that the sort for stacked columns is suitable, if not throw and error
-        ##TODO add more arguments 
-        def check_stacked_sort_sort(ts_container, column_id, column_sort):
-            for id in ts_container[column_id].unique():
-                sort_col_vals = ts_container.query("{column_sort}==1")["sort"]
-                if pd.Series.equals(sort_col_vals.sort(), sort_col_vals):
-                    ##TODO throw a warning
-                    return False
-            return True
-
-
-        engineered_ts_within = diff_within_series(
-            timeseries_container=stacked_df_timeseries_test_container,
-            column_sort=column_sort,
-            column_id=column_id,
-            column_kind=column_kind,
-            column_value=column_value,
-        )
-
     def test_differences_within_dictionary(self):
         (
             dict_timeseries_container,
