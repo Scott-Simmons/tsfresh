@@ -7,8 +7,13 @@ from typing import List
 from md2pdf.core import md2pdf
 from tsfresh.feature_extraction import feature_calculators
 from tsfresh.utilities.string_manipulation import get_config_from_string
-from tsfresh.feature_extraction.data import to_tsdata, Timeseries, WideTsFrameAdapter,LongTsFrameAdapter,TsDictAdapter
-
+from tsfresh.feature_extraction.data import (
+    to_tsdata,
+    Timeseries,
+    WideTsFrameAdapter,
+    LongTsFrameAdapter,
+    TsDictAdapter,
+)
 
 
 def clean_feature_timeseries_name(
@@ -19,11 +24,8 @@ def clean_feature_timeseries_name(
     including adding the window length information into the feature timeseries name
     """
     ts_kind_token = "||"
-    feature_timeseries_parameter_token = "|"
     return (
-        feature_timeseries_name.replace("__", ts_kind_token, 1).replace(
-            "__", feature_timeseries_parameter_token
-        )
+        feature_timeseries_name.replace("__", ts_kind_token)
         + f"@window_{window_length}"
     )
 
@@ -70,7 +72,7 @@ def parse_feature_timeseries_parts(full_feature_name: str) -> dict:
     Generates the feature timeseries (fts) parts from a full feature dynamic (fd) name
 
     i.e. given a ful feature dynamic name like:
-    <ts_kind>||<fts_name>|<fts_params>@<window_length>__<fd_name>__<fd_params>
+    <ts_kind>||<fts_name>||<fts_params>@<window_length>__<fd_name>__<fd_params>
 
     Then this function will return a dictionary with two keys:
     1) window_length, an integer
@@ -84,14 +86,12 @@ def parse_feature_timeseries_parts(full_feature_name: str) -> dict:
     """
 
     ts_kind_token = "||"
-    param_token = "|"
     window_length_token = "@"
 
     # Split according to our separator into <col_name>, <feature_name>, <feature_params> <window_length>
     fts_parts = (
         full_feature_name.split("__")[0]
         .replace(ts_kind_token, "__")
-        .replace(param_token, "__")
         .replace(window_length_token, "__")
         .split("__")
     )
@@ -122,12 +122,12 @@ def parse_feature_dynamics_parts(full_feature_name):
     Generates the feature dynamics (fd) parts from a full feature dynamic (fd) name
 
     i.e. given a full feature dynamic name like:
-    <ts_kind>||<fts_name>|<fts_params>@<window_length>__<fd_name>__<fd_params>
+    <ts_kind>||<fts_name>||<fts_params>@<window_length>__<fd_name>__<fd_params>
 
     Then this function will return a dictionary with one key:
     1) fd_parts, a list containing:
     [
-        <ts_kind>||<fts_name>|<fts_params>@<window_length>,
+        <ts_kind>||<fts_name>||<fts_params>@<window_length>,
         <fd_name>,
         <fd_params>*
     ]
@@ -151,7 +151,7 @@ def derive_features_dictionaries(feature_names: List[str]) -> Tuple[dict, dict]:
 
         params:
             feature_names (list of str): the relevant feature names in the form of:
-            <ts_kind>||<feature_time_series>|<feature_times_series_params>@<window_length>__<feature_dynamic_name>__<feature_dynamics_params>
+            <ts_kind>||<feature_time_series>||<feature_times_series_params>@<window_length>__<feature_dynamic_name>__<feature_dynamics_params>
 
         returns:
             fts_mapping (dict): The mapping used to compute the feature time-series on the ts kinds.
@@ -188,7 +188,13 @@ def derive_features_dictionaries(feature_names: List[str]) -> Tuple[dict, dict]:
     return fts_mapping, fd_mapping
 
 
-def diff_within_series(timeseries_container, column_id:str = None, column_sort:str = None, column_kind:str = None, column_value:str = None):
+def diff_within_series(
+    timeseries_container,
+    column_id: str = None,
+    column_sort: str = None,
+    column_kind: str = None,
+    column_value: str = None,
+):
     """
     Time series differencing with 1 order of differencing new engineered time series to the input time series
     params:
@@ -202,113 +208,210 @@ def diff_within_series(timeseries_container, column_id:str = None, column_sort:s
     returns:
          Returns the original dataframe with the engineered timeseries added as new columns
     """
-    data = to_tsdata(timeseries_container, column_id, column_kind, column_value, column_sort)
-    
+    data = to_tsdata(
+        timeseries_container, column_id, column_kind, column_value, column_sort
+    )
+
     if not isinstance(data, (WideTsFrameAdapter, LongTsFrameAdapter, TsDictAdapter)):
-        raise ValueError("Please use a valid supported data format (Dask and PySpark are not supported).")
+        raise ValueError(
+            "Please use a valid supported data format (Dask and PySpark are not supported)."
+        )
 
     if column_sort is None:
         indexing_columns = [column_id]
-        columns_to_drop = []
-    else: 
+        sort_column = []
+    else:
         indexing_columns = [column_id, column_sort]
-        columns_to_drop = [column_sort]
+        sort_column = [column_sort]
 
-    # Case 1: Flat
+    # Case 1: Flat dataframe
     if isinstance(data, WideTsFrameAdapter):
-        timeseries_container_cp = timeseries_container.copy()
-        new_kinds = [f'dt_{kind}' for kind in timeseries_container.drop(indexing_columns, axis=1)]  
-        timeseries_container_cp[new_kinds] = timeseries_container.drop(columns_to_drop,axis=1).groupby(column_id).diff().fillna(0)
 
-    # Case 2: Stacked
-    elif isinstance(data, LongTsFrameAdapter):
-        def stacked_df_within_differencer(timeseries_container): 
-            yield timeseries_container
-            for kind, dataframe in timeseries_container.groupby(column_kind):
-                new_timeseries = dataframe.copy()
-                new_timeseries[column_value] = new_timeseries.groupby(column_id)[column_value].diff().fillna(0)
-                new_timeseries[column_kind] = f'dt_{kind}'
-                yield new_timeseries
-        
-        timeseries_container_cp = pd.concat(stacked_df_within_differencer(timeseries_container)).reset_index(drop=True)
-    
-    # Case 3: Dict of Flat
-    elif isinstance(data, TsDictAdapter): 
         timeseries_container_cp = timeseries_container.copy()
+
+        new_kinds = [
+            f"dt_{kind}" for kind in timeseries_container.drop(indexing_columns, axis=1)
+        ]
+
+        timeseries_container_cp[new_kinds] = (
+            timeseries_container.sort_values(sort_column)
+            .drop(sort_column, axis=1)
+            .groupby(column_id)
+            .diff()
+            .fillna(0)
+        )
+
+    # Case 2: Stacked dataframe
+    elif isinstance(data, LongTsFrameAdapter):
+
+        def stacked_df_within_differencer(timeseries_container):
+            """
+            First yields the full input dataframe, and then
+            every subsequent call yields a new dataframe each time
+            with the value column being the difference within
+            a single timeseries kind as found in the original
+            stacked dataframe
+            """
+
+            yield timeseries_container
+
+            for kind, dataframe in timeseries_container.groupby(column_kind):
+
+                new_timeseries = dataframe.copy()
+
+                new_timeseries[column_value] = (
+                    new_timeseries.sort_values(sort_column)
+                    .groupby(column_id)[column_value]
+                    .diff()
+                    .fillna(0)
+                )
+
+                new_timeseries[column_kind] = f"dt_{kind}"
+
+                yield new_timeseries
+
+        timeseries_container_cp = pd.concat(
+            stacked_df_within_differencer(timeseries_container)
+        ).reset_index(drop=True)
+
+    # Case 3: Dict of flat dataframes
+    elif isinstance(data, TsDictAdapter):
+
+        timeseries_container_cp = timeseries_container.copy()
+
         for kind, flat_dataframe in timeseries_container.items():
+
             new_timeseries = flat_dataframe.copy()
-            new_timeseries[column_value] = new_timeseries.groupby(column_id)[column_value].diff().fillna(0)
-            timeseries_container_cp[f'dt_{kind}'] = new_timeseries
-    
+
+            new_timeseries[column_value] = (
+                new_timeseries.sort_values(sort_column)
+                .groupby(column_id)[column_value]
+                .diff()
+                .fillna(0)
+            )
+
+            timeseries_container_cp[f"dt_{kind}"] = new_timeseries
+
     return timeseries_container_cp
 
 
-def diff_between_series(timeseries_container, column_id, column_sort, column_kind, column_value):
-        """
-        Time series differencing with 1 order of differencing and phase difference operations to add new engineered time series to the input time series
+def diff_between_series(
+    timeseries_container, column_id, column_sort, column_kind, column_value
+):
+    """
+    Time series differencing with 1 order of differencing and phase difference operations to add new engineered time series to the input time series
 
-        params:
-             ts (pd.DataFrame): The pandas.DataFrame with the time series to compute the features for.
-             compute_differences_within_series (bool): Differences within the same timeseries.
-             The first value is always set to zero i.e. f([1,5,2,6]) = [0,4,-3,4]
-             compute_differences_between_series (bool): Differences between two different timeseries.
-             i.e. f([1,2,3,4],[4,3,2,1]) = [3,1,-1,-3]
-             column_id (str): The name of the id column to group by. Please see :ref:`data-formats-label`.
-             column_sort (str): The name of the sort column. Please see :ref:`data-formats-label`.
+    params:
+         ts (pd.DataFrame): The pandas.DataFrame with the time series to compute the features for.
+         compute_differences_within_series (bool): Differences within the same timeseries.
+         The first value is always set to zero i.e. f([1,5,2,6]) = [0,4,-3,4]
+         compute_differences_between_series (bool): Differences between two different timeseries.
+         i.e. f([1,2,3,4],[4,3,2,1]) = [3,1,-1,-3]
+         column_id (str): The name of the id column to group by. Please see :ref:`data-formats-label`.
+         column_sort (str): The name of the sort column. Please see :ref:`data-formats-label`.
 
-        returns:
-             Returns the original dataframe with the engineered timeseries added as new columns
+    returns:
+         Returns the original dataframe with the engineered timeseries added as new columns
 
-        """
+    """
+
+    data = to_tsdata(
+        timeseries_container, column_id, column_kind, column_value, column_sort
+    )
+
+    if not isinstance(data, (WideTsFrameAdapter, LongTsFrameAdapter, TsDictAdapter)):
+        raise ValueError(
+            "Please use a valid supported data format (Dask and PySpark is not supported)."
+        )
+
+    if len(data) <= 1:
+        raise ValueError(
+            "len(data) needs to be greater than 1. Can only difference `timeseries_container` if there is more than one series"
+        )
+
+    if column_sort is None:
+        indexing_columns = [column_id]
+    else:
+        indexing_columns = [column_id, column_sort]
+
+    # Case 1: Flat
+    if isinstance(data, WideTsFrameAdapter):
+
         timeseries_container_cp = timeseries_container.copy()
 
-        data = to_tsdata(timeseries_container_cp, column_id, column_kind, column_value, column_sort)
+        for first_kind, second_kind in combinations(
+            timeseries_container.drop(indexing_columns, axis=1), r=2
+        ):
+            new_kind = f"D_{first_kind}{second_kind}"
 
-        if not isinstance(data, (WideTsFrameAdapter, LongTsFrameAdapter, TsDictAdapter)):
-            raise ValueError("Please use a valid supported data format (Dask and PySpark is not supported).")
+            timeseries_container_cp[new_kind] = (
+                timeseries_container_cp.set_index(indexing_columns)[first_kind]
+                .subtract(
+                    timeseries_container_cp.set_index(indexing_columns)[second_kind]
+                )
+                .reset_index(indexing_columns, drop=True)
+            )
 
-        if len(data) <= 1:
-            raise ValueError("len(data) needs to be greater than 1. Can only difference `timeseries_container` if there is more than one series")
-        
-        if column_sort is None:
-            indexing_columns = [column_id]
-        else: 
-            indexing_columns = [column_id, column_sort]
+    # Case 2: Stacked
+    elif isinstance(data, LongTsFrameAdapter):
 
-        # Case 1: Flat
-        if isinstance(data, WideTsFrameAdapter): 
+        def stacked_df_between_differencer(timeseries_container):
+            """
+            First yields the full input dataframe, and then
+            every subsequent call yields a new dataframe each time
+            with the value column being the difference between
+            two timeseries kinds as found in the original
+            stacked dataframe
+            """
 
-            timeseries_container_cp = timeseries_container.copy()
-            
-            for first_kind, second_kind in combinations(timeseries_container.drop(indexing_columns, axis=1), r=2):
-                new_kind = f'D_{first_kind}{second_kind}'                
-                timeseries_container_cp[new_kind] = timeseries_container_cp.set_index(indexing_columns)[first_kind].subtract(timeseries_container_cp.set_index(indexing_columns)[second_kind]).reset_index(indexing_columns, drop=True)
+            yield timeseries_container
 
-        # Case 2: Stacked
-        elif isinstance(data, LongTsFrameAdapter):
-            def stacked_df_between_differencer(timeseries_container): 
-                yield timeseries_container
-                for first_timeseries, second_timeseries in combinations(timeseries_container.groupby(column_kind), r=2):
-                    first_kind, first_dataframe = first_timeseries
-                    second_kind, second_dataframe = second_timeseries
-                    new_timeseries = first_dataframe
-                    # Index on column_id, column_sort, and subtract column_value
-                    new_timeseries = first_dataframe.drop(column_kind, axis=1).set_index(indexing_columns).subtract(second_dataframe.drop(column_kind, axis=1).set_index(indexing_columns)).reset_index()
-                    new_timeseries[column_kind] = f'D_{first_kind}{second_kind}'
-                    yield new_timeseries
+            for first_timeseries, second_timeseries in combinations(
+                timeseries_container.groupby(column_kind), r=2
+            ):
 
-            timeseries_container_cp = pd.concat(stacked_df_between_differencer(timeseries_container)).reset_index(drop=True)
-
-        # Case 3: Dict of flat
-        elif isinstance(data, TsDictAdapter):
-
-            for first_timeseries, second_timeseries in combinations(timeseries_container.items(), r=2):
                 first_kind, first_dataframe = first_timeseries
                 second_kind, second_dataframe = second_timeseries
-                new_timeseries = first_dataframe.set_index(indexing_columns).subtract(second_dataframe.set_index(indexing_columns)).reset_index()
-                timeseries_container_cp[f'D_{first_kind}{second_kind}'] = new_timeseries            
 
-        return timeseries_container_cp
+                new_timeseries = (
+                    first_dataframe.drop(column_kind, axis=1)
+                    .set_index(indexing_columns)
+                    .subtract(
+                        second_dataframe.drop(column_kind, axis=1).set_index(
+                            indexing_columns
+                        )
+                    )
+                    .reset_index()
+                )
+
+                new_timeseries[column_kind] = f"D_{first_kind}{second_kind}"
+
+                yield new_timeseries
+
+        timeseries_container_cp = pd.concat(
+            stacked_df_between_differencer(timeseries_container)
+        ).reset_index(drop=True)
+
+    # Case 3: Dict of flat
+    elif isinstance(data, TsDictAdapter):
+
+        timeseries_container_cp = timeseries_container.copy()
+
+        for first_timeseries, second_timeseries in combinations(
+            timeseries_container.items(), r=2
+        ):
+            first_kind, first_dataframe = first_timeseries
+            second_kind, second_dataframe = second_timeseries
+
+            new_timeseries = (
+                first_dataframe.set_index(indexing_columns)
+                .subtract(second_dataframe.set_index(indexing_columns))
+                .reset_index()
+            )
+
+            timeseries_container_cp[f"D_{first_kind}{second_kind}"] = new_timeseries
+
+    return timeseries_container_cp
 
 
 def interpret_feature_dynamic(feature_dynamic: str) -> dict:
@@ -316,12 +419,12 @@ def interpret_feature_dynamic(feature_dynamic: str) -> dict:
     Breaks up a full feature dynamic name into its constituent parts.
 
     It turns a complex full feature dynamic (fd) name:
-    <ts_kind>||<fts_name>|<fts_params*>@<window_length>__<fd_name>__<fd_params>
+    <ts_kind>||<fts_name>||<fts_params*>@<window_length>__<fd_name>__<fd_params>
 
     Into a dictionary containing each part, including the full original name
 
     {
-        "Full Feature Dynamic Name" : <ts_kind>||<fts_name>|<fts_params*>@<window_length>__<fd_name>__<fd_params>,
+        "Full Feature Dynamic Name" : <ts_kind>||<fts_name>||<fts_params*>@<window_length>__<fd_name>__<fd_params>,
         "Input Timeseries": <ts_kind>,
         "Feature Timeseries Calculator": {<fts_name> : [*<fts_params>]},
         "Window Length": <window_length>,
