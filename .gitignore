@@ -64,3 +64,6 @@ feature_dynamics_interpretation.md
 # dask
 dask-worker-space
 dask-worker-space/
+
+tests/*/__pycache__/
+tests/*/feature_extraction/__pycache__/
