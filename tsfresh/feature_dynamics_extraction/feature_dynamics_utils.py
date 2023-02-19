@@ -4,7 +4,7 @@ from itertools import combinations
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 from typing import List
-from md2pdf.core import md2pdf
+#from md2pdf.core import md2pdf
 from tsfresh.feature_extraction import feature_calculators
 from tsfresh.utilities.string_manipulation import get_config_from_string
 from tsfresh.feature_extraction.data import (
