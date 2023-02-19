@@ -190,9 +190,9 @@ class IterableSplitTsDataTestCase(
         self.assertRaises(ValueError, IterableSplitTsData, test_data, window_length)
 
 
-class ApplyableSplitTsDataTestCase(DataAdapterTestCase):
+class ApplyableSplitTsDataTestCase(DataAdapterTestCase):#TODO refactor
     """ """
-
+    ##TODO refactor maybe dont need the data dask testcase
     def assert_tsdata_dask(self, result, expected):
 
         # TODO: Fix this funciton to be
@@ -215,8 +215,33 @@ class ApplyableSplitTsDataTestCase(DataAdapterTestCase):
         )
 
     def test_apply_on_long_data_dask(self):
-        df  = DaskDataTestCase().create_simple_test_sample()
-        return True
+        dask_input_stacked  = DaskDataTestCase().create_simple_test_sample_dask() #todo refactor
+        ts_input = DaskTsAdapter(dask_input_stacked, "id", "kind", "val", "sort")
+
+        (
+            expected_windowed_tuples,
+            window_length,
+        ) = self.create_split_up_test_data_expected_tuples()
+
+        # create expected tuples dataset and return
+        ts_split_dask_data = ApplyableSplitTsData(ts_input, split_size=window_length)
+
+        # Test equality of object's main members
+        self.assertTrue(
+            ts_split_dask_data._split_size == window_length
+            and ts_split_dask_data.df_id_type == object
+        )
+        underlying_data_converted_to_tsdata = to_tsdata(ts_split_dask_data._root_ts_data)
+        expected_non_windowed_tuples = self.create_test_data_expected_tuples()
+        
+        # This does not work
+        self.assert_tsdata_dask(
+              underlying_data_converted_to_tsdata, expected_non_windowed_tuples
+        )
+
+        # # Test equality of each chunk...
+        #self.assert_tsdata(ts_split_dask_data, expected_windowed_tuples)
+        ##return True
 
     def test_iter_on_long_data_no_value_column_dask(self):
         pass
