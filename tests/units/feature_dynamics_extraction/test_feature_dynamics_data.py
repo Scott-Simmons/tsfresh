@@ -219,7 +219,8 @@ class ApplyableSplitTsDataTestCase(DataAdapterTestCase):#TODO refactor
         )
 
     def test_apply_on_long_data_dask(self):
-        dask_input_stacked  = self._create_simple_test_sample_dask() #todo refactor
+
+        dask_input_stacked  = self._create_simple_test_sample_dask() 
         ts_input = DaskTsAdapter(dask_input_stacked, "id", "kind", "val", "sort")
 
         (
@@ -239,7 +240,7 @@ class ApplyableSplitTsDataTestCase(DataAdapterTestCase):#TODO refactor
         underlying_data_converted_to_tsdata = to_tsdata(ts_split_dask_data._root_ts_data)
         expected_non_windowed_tuples = self.create_test_data_expected_tuples()
         
-        # This does not work FIXME
+        # This does not work FIXME - to assert quality of each chunk
         # self.assert_tsdata_dask(
         #       underlying_data_converted_to_tsdata, expected_non_windowed_tuples
         # )
@@ -249,9 +250,40 @@ class ApplyableSplitTsDataTestCase(DataAdapterTestCase):#TODO refactor
         ##return True
 
     def test_iter_on_long_data_no_value_column_dask(self):
-        pass
+
+        dask_input_stacked  = self._create_simple_test_sample_dask()
+        ts_input = DaskTsAdapter(dask_input_stacked, "id", "kind", None, "sort")
+
+        (
+            expected_windowed_tuples,
+            window_length,
+        ) = self.create_split_up_test_data_expected_tuples()
+        
+        ts_split_dask_data_no_value = ApplyableSplitTsData(ts_input, split_size=window_length)
+
+        # Test equality of object's main members
+        self.assertTrue(
+            ts_split_dask_data_no_value._split_size == window_length
+            and ts_split_dask_data_no_value.df_id_type == object
+        )
 
     def test_iter_on_wide_data_dask(self):
+        #TODO
+        df_wide_dask = self.create_test_data_sample_wide()
+        dask_data_wide = DaskTsAdapter(df_wide_dask, "id", "kind", "val", "sort").pivot()
+        #WideTsFrameAdapter(df_wide, "id", "sort")
+        
+        (
+            expected_windowed_tuples,
+            window_length,
+        ) = self.create_split_up_test_data_expected_tuples_wide()
+        split_ts_data_wide_dask = ApplyableSplitTsData(dask_data_wide, split_size=window_length)
+
+        # Test equality of object's main members
+        self.assertTrue(
+            split_ts_data_wide_dask._split_size == window_length
+            and split_ts_data_wide_dask.df_id_type == object
+        )
         pass
 
     def test_iter_on_wide_data_no_sort_column_dask(self):
@@ -272,4 +304,5 @@ class ApplyableSplitTsDataTestCase(DataAdapterTestCase):#TODO refactor
     def test_fractional_split_size_dask(self):
         pass
 
+#TODO remove
 ApplyableSplitTsDataTestCase().test_apply_on_long_data_dask()
