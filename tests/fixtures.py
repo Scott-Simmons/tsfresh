@@ -8,7 +8,6 @@ from unittest import TestCase
 
 import numpy as np
 import pandas as pd
-import dask.dataframe as ddf
 
 
 @contextmanager
@@ -1275,7 +1274,6 @@ class DataTestCase(TestCase):
         return (wide_test_data_expected_chunked_up_tuples, window_length)
 
 
-class DaskDataTestCase:
     def create_simple_test_sample(self):
 
         #identical to the above 

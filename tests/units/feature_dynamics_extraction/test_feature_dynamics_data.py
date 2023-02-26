@@ -12,7 +12,6 @@ from tsfresh.feature_dynamics_extraction.feature_dynamics_data import (
 import pandas as pd
 import dask.dataframe as dd
 from tests.units.feature_extraction.test_data import DataAdapterTestCase
-from tests.fixtures import DaskDataTestCase
 
 
 class IterableSplitTsDataTestCase(
@@ -39,9 +38,6 @@ class IterableSplitTsDataTestCase(
         self.assert_tsdata(
             underlying_data_converted_to_tsdata, expected_non_windowed_tuples
         )
-
-        ##TODO test the dask df test case
-        df_stacked = self.create
 
         # Test equality of each chunk...
         self.assert_tsdata(split_ts_data, expected_windowed_tuples)
@@ -215,8 +211,7 @@ class ApplyableSplitTsDataTestCase(DataAdapterTestCase):
         )
 
     def test_apply_on_long_data_dask(self):
-        df  = DaskDataTestCase().create_simple_test_sample()
-        return True
+        pass
 
     def test_iter_on_long_data_no_value_column_dask(self):
         pass
@@ -241,5 +236,3 @@ class ApplyableSplitTsDataTestCase(DataAdapterTestCase):
 
     def test_fractional_split_size_dask(self):
         pass
-
-ApplyableSplitTsDataTestCase().test_apply_on_long_data_dask()
