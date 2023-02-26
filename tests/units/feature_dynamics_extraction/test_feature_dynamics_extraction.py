@@ -560,6 +560,43 @@ class DynamicsExtractionTestCase(DataTestCase):
             feature_dynamics_fc_parameters={window_length: fc_test_params},
         )
 
+        expected_ans = pd.DataFrame(
+            data={
+                'y1||minimum@window_3__minimum': {1: 1.0, 2: -34.0}, 
+                'y2||minimum@window_3__minimum': {1: -10.0, 2: 3.0}, 
+                'y3||minimum@window_3__minimum': {1: 4.0, 2: 1.0}
+                }
+            )
+
+        pd.testing.assert_frame_equal(extract_feature_dynamics, expected_ans)
+
+    def test_extract_feature_dynamics_dict(self):
+        
+        ts_list_of_dicts = self.create_simple_test_data_sample_dict()
+        fc_test_params = {"minimum": None}
+        window_length = 3
+
+        extracted_feature_dynamics = extract_feature_dynamics(
+            timeseries_container=ts_long_df,
+            column_id="id",
+            column_sort="sort",
+            column_kind="kind", #None since wide format
+            column_value="val",
+            n_jobs= 1,#self.n_jobs,
+            feature_timeseries_fc_parameters={window_length: fc_test_params},
+            feature_dynamics_fc_parameters={window_length: fc_test_params},
+        )
+
+        expected_ans = pd.DataFrame(
+            data={
+                'y1||minimum@window_3__minimum': {1: 1.0, 2: -34.0}, 
+                'y2||minimum@window_3__minimum': {1: -10.0, 2: 3.0}, 
+                'y3||minimum@window_3__minimum': {1: 4.0, 2: 1.0}
+                }
+            )
+
+        pd.testing.assert_frame_equal(extract_feature_dynamics, expected_ans)
+
 class ParallelDynamicsExtractionTestCase(DataTestCase):
     def setUp(self):
         self.n_jobs = 2
