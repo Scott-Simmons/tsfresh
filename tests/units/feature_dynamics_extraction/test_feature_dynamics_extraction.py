@@ -540,7 +540,7 @@ class DynamicsExtractionTestCase(DataTestCase):
                 }
             )
 
-        pd.testing.assert_frame_equal(extract_feature_dynamics, expected_ans)
+        pd.testing.assert_frame_equal(extracted_feature_dynamics, expected_ans)
     
     def test_extract_feature_dynamics_long(self):
 
@@ -568,7 +568,7 @@ class DynamicsExtractionTestCase(DataTestCase):
                 }
             )
 
-        pd.testing.assert_frame_equal(extract_feature_dynamics, expected_ans)
+        pd.testing.assert_frame_equal(extracted_feature_dynamics, expected_ans)
 
     def test_extract_feature_dynamics_dict(self):
         
@@ -577,10 +577,10 @@ class DynamicsExtractionTestCase(DataTestCase):
         window_length = 3
 
         extracted_feature_dynamics = extract_feature_dynamics(
-            timeseries_container=ts_long_df,
+            timeseries_container=ts_list_of_dicts,
             column_id="id",
             column_sort="sort",
-            column_kind="kind", #None since wide format
+            column_kind=None, #None since wide format
             column_value="val",
             n_jobs= 1,#self.n_jobs,
             feature_timeseries_fc_parameters={window_length: fc_test_params},
@@ -595,7 +595,7 @@ class DynamicsExtractionTestCase(DataTestCase):
                 }
             )
 
-        pd.testing.assert_frame_equal(extract_feature_dynamics, expected_ans)
+        pd.testing.assert_frame_equal(extracted_feature_dynamics, expected_ans)
 
 class ParallelDynamicsExtractionTestCase(DataTestCase):
     def setUp(self):
