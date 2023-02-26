@@ -542,6 +542,23 @@ class DynamicsExtractionTestCase(DataTestCase):
 
         pd.testing.assert_frame_equal(extract_feature_dynamics, expected_ans)
     
+    def test_extract_feature_dynamics_long(self):
+
+        ts_long_df,_,_ = self.create_simple_test_data_sample_stacked()
+
+        fc_test_params = {"minimum": None}
+        window_length = 3
+
+        extracted_feature_dynamics = extract_feature_dynamics(
+            timeseries_container=ts_long_df,
+            column_id="id",
+            column_sort="sort",
+            column_kind="kind", #None since wide format
+            column_value="val",
+            n_jobs= 1,#self.n_jobs,
+            feature_timeseries_fc_parameters={window_length: fc_test_params},
+            feature_dynamics_fc_parameters={window_length: fc_test_params},
+        )
 
 class ParallelDynamicsExtractionTestCase(DataTestCase):
     def setUp(self):
