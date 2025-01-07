@@ -1084,7 +1084,7 @@ def fft_coefficient(x, param):
     """
 
     assert (
-        min([config["coeff"] for config in param]) >= 0
+        min((config["coeff"] for config in param)) >= 0
     ), "Coefficients must be positive or zero."
     assert {config["attr"] for config in param} <= {
         "imag",
