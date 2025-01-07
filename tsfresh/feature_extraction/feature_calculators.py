@@ -1225,7 +1225,7 @@ def fft_aggregated(x, param):
     fft_abs = np.abs(np.fft.rfft(x))
 
     res = [calculation[config["aggtype"]](fft_abs) for config in param]
-    index = ['aggtype_"{}"'.format(config["aggtype"]) for config in param]
+    index = [f'aggtype_"{config["aggtype"]}"' for config in param]
     return zip(index, res)
 
 
@@ -1387,7 +1387,7 @@ def cwt_coefficients(x, param):
 
         calculated_cwt_for_widths = calculated_cwt[widths]
 
-        indices += ["coeff_{}__w_{}__widths_{}".format(coeff, w, widths)]
+        indices += [f"coeff_{coeff}__w_{w}__widths_{widths}"]
 
         i = widths.index(w)
         if calculated_cwt_for_widths.shape[1] <= coeff:
