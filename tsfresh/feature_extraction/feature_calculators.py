@@ -2100,19 +2100,18 @@ def friedrich_coefficients(x, param):
         r = parameter_combination["r"]
         coeff = parameter_combination["coeff"]
 
-        assert coeff >= 0, "Coefficients must be positive or zero. Found {}".format(
-            coeff
-        )
+        assert coeff >= 0, f"Coefficients must be positive or zero. Found {coeff}"
 
         # calculate the current friedrich coefficients if they do not exist yet
         if m not in calculated or r not in calculated[m]:
             calculated[m][r] = _estimate_friedrich_coefficients(x, m, r)
 
         try:
-            res["coeff_{}__m_{}__r_{}".format(coeff, m, r)] = calculated[m][r][coeff]
+            res[f"coeff_{coeff}__m_{m}__r_{r}"] = calculated[m][r][coeff]
         except IndexError:
-            res["coeff_{}__m_{}__r_{}".format(coeff, m, r)] = np.nan
-    return [(key, value) for key, value in res.items()]
+            res[f"coeff_{coeff}__m_{m}__r_{r}"] = np.nan
+
+    return list(res.items())
 
 
 @set_property("fctype", "simple")
