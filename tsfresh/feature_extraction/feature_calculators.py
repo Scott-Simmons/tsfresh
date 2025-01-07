@@ -150,7 +150,7 @@ def _estimate_friedrich_coefficients(x, m, r):
     :return: coefficients of polynomial of deterministic dynamics
     :return type: ndarray
     """
-    assert m > 0, "Order of polynomial need to be positive integer, found {}".format(m)
+    assert m > 0, f"Order of polynomial need to be positive integer, found {m}"
 
     df = pd.DataFrame({"signal": x[:-1], "delta": np.diff(x)})
     try:
