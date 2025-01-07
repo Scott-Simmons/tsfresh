@@ -1113,7 +1113,7 @@ def fft_coefficient(x, param):
         for config in param
     ]
     index = [
-        'attr_"{}"__coeff_{}'.format(config["attr"], config["coeff"])
+        f'attr_"{config["attr"]}"__coeff_{config["coeff"]}'
         for config in param
     ]
     return zip(index, res)
