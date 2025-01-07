@@ -2202,7 +2202,7 @@ def agg_linear_trend(x, param):
             res_data.append(getattr(calculated_agg[f_agg][chunk_len], attr))
 
         res_index.append(
-            'attr_"{}"__chunk_len_{}__f_agg_"{}"'.format(attr, chunk_len, f_agg)
+            f'attr_"{attr}"__chunk_len_{chunk_len}__f_agg_"{f_agg}"'
         )
 
     return zip(res_index, res_data)
@@ -2249,7 +2249,7 @@ def energy_ratio_by_chunks(x, param):
             )
 
         res_index.append(
-            "num_segments_{}__segment_focus_{}".format(num_segments, segment_focus)
+            f"num_segments_{num_segments}__segment_focus_{segment_focus}"
         )
 
     # Materialize as list for Python 3 compatibility with name handling
