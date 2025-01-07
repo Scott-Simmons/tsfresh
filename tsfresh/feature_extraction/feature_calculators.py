@@ -1417,7 +1417,7 @@ def spkt_welch_density(x, param):
     max_length_per_segment = 256
     _, pxx = welch(x, nperseg=min(len(x), max_length_per_segment))
     coeff = [config["coeff"] for config in param]
-    indices = ["coeff_{}".format(i) for i in coeff]
+    indices = [f"coeff_{i}" for i in coeff]
 
     if len(pxx) <= np.max(
         coeff
@@ -1469,7 +1469,7 @@ def ar_coefficient(x, param):
         k = parameter_combination["k"]
         p = parameter_combination["coeff"]
 
-        column_name = "coeff_{}__k_{}".format(p, k)
+        column_name = f"coeff_{p}__k_{k}"
 
         if k not in calculated_ar_params:
             try:
