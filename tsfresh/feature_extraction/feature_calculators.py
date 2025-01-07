@@ -121,9 +121,9 @@ def _get_length_sequences_where(x):
     """
     if len(x) == 0:
         return [0]
-    else:
-        res = [len(list(group)) for value, group in itertools.groupby(x) if value == 1]
-        return res if len(res) > 0 else [0]
+
+    res = [len(list(group)) for value, group in itertools.groupby(x) if value == 1]
+    return res if len(res) > 0 else [0]
 
 
 def _estimate_friedrich_coefficients(x, m, r):
@@ -150,7 +150,7 @@ def _estimate_friedrich_coefficients(x, m, r):
     :return: coefficients of polynomial of deterministic dynamics
     :return type: ndarray
     """
-    assert m > 0, "Order of polynomial need to be positive integer, found {}".format(m)
+    assert m > 0, f"Order of polynomial need to be positive integer, found {m}"
 
     df = pd.DataFrame({"signal": x[:-1], "delta": np.diff(x)})
     try:
@@ -314,7 +314,7 @@ def symmetry_looking(x, param):
     mean_median_difference = np.abs(np.mean(x) - np.median(x))
     max_min_difference = np.max(x) - np.min(x)
     return [
-        ("r_{}".format(r["r"]), mean_median_difference < (r["r"] * max_min_difference))
+        (f"r_{r['r']}", mean_median_difference < (r['r'] * max_min_difference))
         for r in param
     ]
 
@@ -722,11 +722,10 @@ def variation_coefficient(x):
     :return: the value of this feature
     :return type: float
     """
-    mean = np.mean(x)
-    if mean != 0:
-        return np.std(x) / mean
-    else:
-        return np.nan
+    avg = np.mean(x)
+    if avg != 0:
+        return np.std(x) / avg
+    return np.nan
 
 
 @set_property("fctype", "simple")
@@ -947,10 +946,10 @@ def percentage_of_reoccurring_values_to_all_values(x):
     if len(x) == 0:
         return np.nan
 
-    unique, counts = np.unique(x, return_counts=True)
+    _, counts = np.unique(x, return_counts=True)
 
     if counts.shape[0] == 0:
-        return 0
+        return 0.0
 
     return np.sum(counts > 1) / float(counts.shape[0])
 
@@ -982,7 +981,7 @@ def percentage_of_reoccurring_datapoints_to_all_datapoints(x):
     reoccuring_values = value_counts[value_counts > 1].sum()
 
     if np.isnan(reoccuring_values):
-        return 0
+        return 0.0
 
     return reoccuring_values / x.size
 
@@ -1085,7 +1084,7 @@ def fft_coefficient(x, param):
     """
 
     assert (
-        min([config["coeff"] for config in param]) >= 0
+        min((config["coeff"] for config in param)) >= 0
     ), "Coefficients must be positive or zero."
     assert {config["attr"] for config in param} <= {
         "imag",
@@ -1114,7 +1113,7 @@ def fft_coefficient(x, param):
         for config in param
     ]
     index = [
-        'attr_"{}"__coeff_{}'.format(config["attr"], config["coeff"])
+        f'attr_"{config["attr"]}"__coeff_{config["coeff"]}'
         for config in param
     ]
     return zip(index, res)
@@ -1184,15 +1183,14 @@ def fft_aggregated(x, param):
         :return type: float
         """
 
-        variance = get_variance(y)
+        var = get_variance(y)
         # In the limit of a dirac delta, skew should be 0 and variance 0.  However, in the discrete limit,
         # the skew blows up as variance --> 0, hence return nan when variance is smaller than a resolution of 0.5:
-        if variance < 0.5:
+        if var < 0.5:
             return np.nan
-        else:
-            return (
-                get_moment(y, 3) - 3 * get_centroid(y) * variance - get_centroid(y) ** 3
-            ) / get_variance(y) ** (1.5)
+        return (
+            get_moment(y, 3) - 3 * get_centroid(y) * variance - get_centroid(y) ** 3
+        ) / get_variance(y) ** (1.5)
 
     def get_kurtosis(y):
         """
@@ -1205,18 +1203,17 @@ def fft_aggregated(x, param):
         :return type: float
         """
 
-        variance = get_variance(y)
+        var = get_variance(y)
         # In the limit of a dirac delta, kurtosis should be 3 and variance 0.  However, in the discrete limit,
         # the kurtosis blows up as variance --> 0, hence return nan when variance is smaller than a resolution of 0.5:
-        if variance < 0.5:
+        if var < 0.5:
             return np.nan
-        else:
-            return (
-                get_moment(y, 4)
-                - 4 * get_centroid(y) * get_moment(y, 3)
-                + 6 * get_moment(y, 2) * get_centroid(y) ** 2
-                - 3 * get_centroid(y)
-            ) / get_variance(y) ** 2
+        return (
+            get_moment(y, 4)
+            - 4 * get_centroid(y) * get_moment(y, 3)
+            + 6 * get_moment(y, 2) * get_centroid(y) ** 2
+            - 3 * get_centroid(y)
+        ) / get_variance(y) ** 2
 
     calculation = dict(
         centroid=get_centroid,
@@ -1224,11 +1221,17 @@ def fft_aggregated(x, param):
         skew=get_skew,
         kurtosis=get_kurtosis,
     )
+    calculation = {
+        "centroid": get_centroid,
+        "variance": get_variance,
+        "skew": get_skew,
+        "kurtosis": get_kurtosis,
+    }
 
     fft_abs = np.abs(np.fft.rfft(x))
 
     res = [calculation[config["aggtype"]](fft_abs) for config in param]
-    index = ['aggtype_"{}"'.format(config["aggtype"]) for config in param]
+    index = [f'aggtype_"{config["aggtype"]}"' for config in param]
     return zip(index, res)
 
 
@@ -1292,17 +1295,17 @@ def index_mass_quantile(x, param):
 
     if s == 0:
         # all values in x are zero or it has length 0
-        return [("q_{}".format(config["q"]), np.nan) for config in param]
-    else:
-        # at least one value is not zero
-        mass_centralized = np.cumsum(abs_x) / s
-        return [
-            (
-                "q_{}".format(config["q"]),
-                (np.argmax(mass_centralized >= config["q"]) + 1) / len(x),
-            )
-            for config in param
-        ]
+        return [(f"q_{config['q']}", np.nan) for config in param]
+
+    # at least one value is not zero
+    mass_centralized = np.cumsum(abs_x) / s
+    return [
+        (
+            f"q_{config['q']}",
+            (np.argmax(mass_centralized >= config["q"]) + 1) / len(x),
+        )
+        for config in param
+    ]
 
 
 @set_property("fctype", "simple")
@@ -1345,10 +1348,10 @@ def linear_trend(x, param):
     :return type: List[Tuple[str, float]]
     """
     # todo: we could use the index of the DataFrame here
-    linReg = linregress(range(len(x)), x)
+    lin_reg = linregress(range(len(x)), x)
 
     return [
-        ('attr_"{}"'.format(config["attr"]), getattr(linReg, config["attr"]))
+        (f'attr_"{config["attr"]}"', getattr(lin_reg, config["attr"]))
         for config in param
     ]
 
@@ -1390,7 +1393,7 @@ def cwt_coefficients(x, param):
 
         calculated_cwt_for_widths = calculated_cwt[widths]
 
-        indices += ["coeff_{}__w_{}__widths_{}".format(coeff, w, widths)]
+        indices += [f"coeff_{coeff}__w_{w}__widths_{widths}"]
 
         i = widths.index(w)
         if calculated_cwt_for_widths.shape[1] <= coeff:
@@ -1417,9 +1420,10 @@ def spkt_welch_density(x, param):
     :return type: Iterator[Tuple[str, float]]
     """
 
-    freq, pxx = welch(x, nperseg=min(len(x), 256))
+    max_length_per_segment = 256
+    _, pxx = welch(x, nperseg=min(len(x), max_length_per_segment))
     coeff = [config["coeff"] for config in param]
-    indices = ["coeff_{}".format(i) for i in coeff]
+    indices = [f"coeff_{i}" for i in coeff]
 
     if len(pxx) <= np.max(
         coeff
@@ -1431,13 +1435,13 @@ def spkt_welch_density(x, param):
             coefficient for coefficient in coeff if coefficient not in reduced_coeff
         ]
 
-        # Fill up the rest of the requested coefficients with np.NaNs
+        # Fill up the rest of the requested coefficients with np.nans
         return zip(
             indices,
             list(pxx[reduced_coeff]) + [np.nan] * len(not_calculated_coefficients),
         )
-    else:
-        return zip(indices, pxx[coeff])
+
+    return zip(indices, pxx[coeff])
 
 
 @set_property("fctype", "combiner")
@@ -1471,12 +1475,12 @@ def ar_coefficient(x, param):
         k = parameter_combination["k"]
         p = parameter_combination["coeff"]
 
-        column_name = "coeff_{}__k_{}".format(p, k)
+        column_name = f"coeff_{p}__k_{k}"
 
         if k not in calculated_ar_params:
             try:
-                calculated_AR = AutoReg(x_as_list, lags=k, trend="c")
-                calculated_ar_params[k] = calculated_AR.fit().params
+                calculated_ar = AutoReg(x_as_list, lags=k, trend="c")
+                calculated_ar_params[k] = calculated_ar.fit().params
             except (ZeroDivisionError, LinAlgError, ValueError):
                 calculated_ar_params[k] = [np.nan] * k
 
@@ -1516,7 +1520,7 @@ def change_quantiles(x, ql, qh, isabs, f_agg):
     :return type: float
     """
     if ql >= qh:
-        return 0
+        return 0.0
 
     div = np.diff(x)
     if isabs:
@@ -1527,15 +1531,15 @@ def change_quantiles(x, ql, qh, isabs, f_agg):
         bin_cat = pd.qcut(x, [ql, qh], labels=False)
         bin_cat_0 = bin_cat == 0
     except ValueError:  # Occurs when ql are qh effectively equal, e.g. x is not long enough or is too categorical
-        return 0
+        return 0.0
     # We only count changes that start and end inside the corridor
     ind = (bin_cat_0 & _roll(bin_cat_0, 1))[1:]
     if np.sum(ind) == 0:
-        return 0
-    else:
-        ind_inside_corridor = np.where(ind == 1)
-        aggregator = getattr(np, f_agg)
-        return aggregator(div[ind_inside_corridor])
+        return 0.0
+
+    ind_inside_corridor = np.where(ind == 1)
+    aggregator = getattr(np, f_agg)
+    return aggregator(div[ind_inside_corridor])
 
 
 @set_property("fctype", "simple")
@@ -1574,13 +1578,13 @@ def time_reversal_asymmetry_statistic(x, lag):
     n = len(x)
     x = np.asarray(x)
     if 2 * lag >= n:
-        return 0
-    else:
-        one_lag = _roll(x, -lag)
-        two_lag = _roll(x, 2 * -lag)
-        return np.mean(
-            (two_lag * two_lag * one_lag - one_lag * x * x)[0 : (n - 2 * lag)]
-        )
+        return 0.0
+
+    one_lag = _roll(x, -lag)
+    two_lag = _roll(x, 2 * -lag)
+    return np.mean(
+        (two_lag * two_lag * one_lag - one_lag * x * x)[0 : (n - 2 * lag)]
+    )
 
 
 @set_property("fctype", "simple")
@@ -1616,13 +1620,13 @@ def c3(x, lag):
     :return: the value of this feature
     :return type: float
     """
-    if not isinstance(x, (np.ndarray, pd.Series)):
-        x = np.asarray(x)
+    x = np.asarray(x)
     n = x.size
+
     if 2 * lag >= n:
-        return 0
-    else:
-        return np.mean((_roll(x, 2 * -lag) * _roll(x, -lag) * x)[0 : (n - 2 * lag)])
+        return 0.0
+
+    return np.mean((_roll(x, 2 * -lag) * _roll(x, -lag) * x)[0 : (n - 2 * lag)])
 
 
 @set_property("fctype", "simple")
@@ -1815,7 +1819,8 @@ def fourier_entropy(x, bins):
     Ref: https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.signal.welch.html
 
     """
-    _, pxx = welch(x, nperseg=min(len(x), 256))
+    max_length_per_segment = 256
+    _, pxx = welch(x, nperseg=min(len(x), max_length_per_segment))
     return binned_entropy(pxx / np.max(pxx), bins)
 
 
@@ -1953,8 +1958,8 @@ def autocorrelation(x, lag):
     v = np.var(x)
     if np.isclose(v, 0):
         return np.nan
-    else:
-        return sum_product / ((len(x) - lag) * v)
+
+    return sum_product / ((len(x) - lag) * v)
 
 
 @set_property("fctype", "simple")
@@ -2055,8 +2060,8 @@ def value_count(x, value):
 
     if np.isnan(value):
         return np.isnan(x).sum()
-    else:
-        return x[x == value].size
+
+    return x[x == value].size
 
 
 @set_property("fctype", "simple")
@@ -2114,19 +2119,18 @@ def friedrich_coefficients(x, param):
         r = parameter_combination["r"]
         coeff = parameter_combination["coeff"]
 
-        assert coeff >= 0, "Coefficients must be positive or zero. Found {}".format(
-            coeff
-        )
+        assert coeff >= 0, f"Coefficients must be positive or zero. Found {coeff}"
 
         # calculate the current friedrich coefficients if they do not exist yet
         if m not in calculated or r not in calculated[m]:
             calculated[m][r] = _estimate_friedrich_coefficients(x, m, r)
 
         try:
-            res["coeff_{}__m_{}__r_{}".format(coeff, m, r)] = calculated[m][r][coeff]
+            res[f"coeff_{coeff}__m_{m}__r_{r}"] = calculated[m][r][coeff]
         except IndexError:
-            res["coeff_{}__m_{}__r_{}".format(coeff, m, r)] = np.nan
-    return [(key, value) for key, value in res.items()]
+            res[f"coeff_{coeff}__m_{m}__r_{r}"] = np.nan
+
+    return list(res.items())
 
 
 @set_property("fctype", "simple")
@@ -2217,7 +2221,7 @@ def agg_linear_trend(x, param):
             res_data.append(getattr(calculated_agg[f_agg][chunk_len], attr))
 
         res_index.append(
-            'attr_"{}"__chunk_len_{}__f_agg_"{}"'.format(attr, chunk_len, f_agg)
+            f'attr_"{attr}"__chunk_len_{chunk_len}__f_agg_"{f_agg}"'
         )
 
     return zip(res_index, res_data)
@@ -2264,7 +2268,7 @@ def energy_ratio_by_chunks(x, param):
             )
 
         res_index.append(
-            "num_segments_{}__segment_focus_{}".format(num_segments, segment_focus)
+            f"num_segments_{num_segments}__segment_focus_{segment_focus}"
         )
 
     # Materialize as list for Python 3 compatibility with name handling
@@ -2303,7 +2307,7 @@ def linear_trend_timewise(x, param):
     lin_reg = linregress(times_hours, x.values)
 
     return [
-        ('attr_"{}"'.format(config["attr"]), getattr(lin_reg, config["attr"]))
+        (f'attr_"{config["attr"]}"', getattr(lin_reg, config["attr"]))
         for config in param
     ]
 
