@@ -1673,19 +1673,33 @@ def binned_entropy(x, max_bins):
     if np.isnan(x).any():
         return np.nan
 
-    hist, bin_edges = np.histogram(x, bins=max_bins)
+    hist, _ = np.histogram(x, bins=max_bins)
     probs = hist / x.size
     probs[probs == 0] = 1.0
     return -np.sum(probs * np.log(probs))
 
 
-# todo - include latex formula
 # todo - check if vectorizable
 @set_property("high_comp_cost", True)
 @set_property("fctype", "simple")
-def sample_entropy(x):
+def sample_entropy(x, m=2, r=None):
     """
     Calculate and return sample entropy of x.
+
+    Sample entropy for a time series is defined as:
+
+    .. math::
+
+        - -\\ln\\left(\\frac{A}{B}\\right)
+
+    where:
+
+    \begin{itemize}
+      \\item \\( m \\) is the embedding dimension (or window size).
+      \\item \\( r \\) is the tolerance (threshold) for considering two points as similar.
+      \\item \\( A \\) is the number of template matches of length \\( m+1 \\) that satisfy the condition \\( |x_i - x_j| < r \\) for all \\( i \\) and \\( j \\) within the template.
+      \\item \\( B \\) is the number of template matches of length \\( m \\) that satisfy the same condition.
+    \\end{itemize}
 
     .. rubric:: References
 
@@ -1698,16 +1712,17 @@ def sample_entropy(x):
     :return: the value of this feature
     :return type: float
     """
+
     x = np.array(x)
 
-    # if one of the values is NaN, we can not compute anything meaningful
+    # if one of the values is nan, we can not compute anything meaningful
     if np.isnan(x).any():
         return np.nan
 
-    m = 2  # common value for m, according to wikipedia...
-    tolerance = 0.2 * np.std(
-        x
-    )  # 0.2 is a common value for r, according to wikipedia...
+    if r is None:
+        r = 0.2 * np.std(
+            x
+        )  # common value for r, according to wikipedia...
 
     # Split time series and save all templates of length m
     # Basically we turn [1, 2, 3, 4] into [1, 2], [2, 3], [3, 4]
@@ -1726,13 +1741,13 @@ def sample_entropy(x):
     # taking the abs and max gives us:
     # [0, 1] and [1, 0]
     # as the diagonal elements are always 0, we substract 1.
-    B = np.sum([np.sum(np.abs(xmi - xm).max(axis=1) <= tolerance) - 1 for xmi in xm])
+    B = np.sum([np.sum(np.abs(xmi - xm).max(axis=1) <= r) - 1 for xmi in xm])
 
     # Similar for computing A
     xmp1 = _into_subchunks(x, m + 1)
 
     A = np.sum(
-        [np.sum(np.abs(xmi - xmp1).max(axis=1) <= tolerance) - 1 for xmi in xmp1]
+        [np.sum(np.abs(xmi - xmp1).max(axis=1) <= r) - 1 for xmi in xmp1]
     )
 
     # Return SampEn
