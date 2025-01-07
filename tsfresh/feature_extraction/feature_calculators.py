@@ -2288,7 +2288,7 @@ def linear_trend_timewise(x, param):
     lin_reg = linregress(times_hours, x.values)
 
     return [
-        ('attr_"{}"'.format(config["attr"]), getattr(lin_reg, config["attr"]))
+        (f'attr_"{config["attr"]}"', getattr(lin_reg, config["attr"]))
         for config in param
     ]
 
