@@ -1342,10 +1342,10 @@ def linear_trend(x, param):
     :return type: List[Tuple[str, float]]
     """
     # todo: we could use the index of the DataFrame here
-    linReg = linregress(range(len(x)), x)
+    lin_reg = linregress(range(len(x)), x)
 
     return [
-        ('attr_"{}"'.format(config["attr"]), getattr(linReg, config["attr"]))
+        (f'attr_"{config["attr"]}"', getattr(lin_reg, config["attr"]))
         for config in param
     ]
 
