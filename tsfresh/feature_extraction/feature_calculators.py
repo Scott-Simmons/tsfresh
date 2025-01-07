@@ -314,7 +314,7 @@ def symmetry_looking(x, param):
     mean_median_difference = np.abs(np.mean(x) - np.median(x))
     max_min_difference = np.max(x) - np.min(x)
     return [
-        ("r_{}".format(r["r"]), mean_median_difference < (r["r"] * max_min_difference))
+        (f"r_{r['r']}", mean_median_difference < (r['r'] * max_min_difference))
         for r in param
     ]
 
