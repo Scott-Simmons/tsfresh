@@ -8,3 +8,5 @@ from tsfresh.feature_extraction.settings import (
     EfficientFCParameters,
     MinimalFCParameters,
 )
+
+from .cython_ext import approximate_entropy

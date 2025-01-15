@@ -1,6 +1,9 @@
 #others
 *.lock
 
+# c extensions (autogen)
+*.c
+
 # Temporary and binary files
 *~
 *.py[cod]

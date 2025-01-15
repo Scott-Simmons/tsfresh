@@ -32,6 +32,8 @@ from scipy.stats import linregress
 from statsmodels.tools.sm_exceptions import MissingDataError
 from statsmodels.tsa.ar_model import AutoReg
 
+import tsfresh.feature_extraction.cython_ext as cython_ext
+
 try:
     import matrixprofile as mp
     from matrixprofile.exceptions import NoSolutionPossible
@@ -1769,25 +1771,7 @@ def approximate_entropy(x, m, r):
     :return: Approximate entropy
     :return type: float
     """
-    if not isinstance(x, (np.ndarray, pd.Series)):
-        x = np.asarray(x)
-
-    N = x.size
-    r *= np.std(x)
-    if r < 0:
-        raise ValueError("Parameter r must be positive.")
-    if N <= m + 1:
-        return 0
-
-    def _phi(m):
-        x_re = np.array([x[i : i + m] for i in range(N - m + 1)])
-        C = np.sum(
-            np.max(np.abs(x_re[:, np.newaxis] - x_re[np.newaxis, :]), axis=2) <= r,
-            axis=0,
-        ) / (N - m + 1)
-        return np.sum(np.log(C)) / (N - m + 1.0)
-
-    return np.abs(_phi(m) - _phi(m + 1))
+    return cython_ext.approx_entropy.approximate_entropy(x, m, r)
 
 
 @set_property("fctype", "simple")
